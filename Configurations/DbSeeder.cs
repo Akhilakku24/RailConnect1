@@ -32,7 +32,7 @@ namespace RailwayReservation.Configuration
                     EmailConfirmed = true
                 };
 
-                var result = await userManager.CreateAsync(newAdmin, "admin@123"); 
+                var result = await userManager.CreateAsync(newAdmin, "xxxxxx"); 
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(newAdmin, "Admin");
