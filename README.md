@@ -18,6 +18,8 @@ A RESTful Web API built with ASP.NET Core 10 for managing railway reservations. 
 **Admin Features**
 - Add new trains to the system
 - Delete existing trains
+- Update Existing trains
+- View all Bookings
 
 ## API Endpoints
 
