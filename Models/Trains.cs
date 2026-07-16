@@ -15,9 +15,7 @@ namespace RailwayReservation.Models
         public decimal BaseFare { get; set; }
         public int TotalSeats { get; set; }
         public int NumCoaches { get; set; } = 10; 
-        public int BusinessCoachCount { get; set; } = 1; 
-        public decimal BusinessPercentage { get; set; } = 0.15m; 
-        public decimal QuotaPercentage { get; set; } = 0.25m; 
+        public decimal BusinessPercentage { get; set; } = 0.20m;
         public bool IsActive { get; set; } = true; 
     }
 }

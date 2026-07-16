@@ -37,10 +37,13 @@ namespace RailwayReservation.Repositories
                 .ToListAsync();
         }
 
-        public async Task<int> GetConfirmedBookingCountByTrainAsync(int trainId)
+        public async Task<int> GetBookedSeatCountByTrainAsync(int trainId)
         {
             return await _context.Bookings
-                .CountAsync(b => b.TrainId == trainId && b.Status != "Cancelled");
+                .Where(b => b.TrainId == trainId &&
+                b.Status != "Cancelled")
+                .SelectMany(b => b.Passengers)
+                .CountAsync();
         }
 
         public async Task<IEnumerable<Booking>> GetByUserIdAsync(string userId)

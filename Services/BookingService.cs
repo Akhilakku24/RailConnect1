@@ -1,11 +1,9 @@
-using RailwayReservation.DTOs;
 using RailwayReservation.Interfaces;
 using RailwayReservation.Models;
-
+using RailConnect.DTOs;
 using Microsoft.AspNetCore.Identity;
-
-
-
+using RailwayConnect.DTOs;
+using RailConnect.Configurations;
 
 namespace RailwayReservation.Services
 {
@@ -36,18 +34,52 @@ namespace RailwayReservation.Services
             var train = await _trainRepo.GetTrainByTrainNoAsync(request.TrainNo);
             if (train == null) throw new Exception("Train not found");
 
+            string classType = string.IsNullOrWhiteSpace(request.ClassType) || 
+            request.ClassType.Equals("string", StringComparison.OrdinalIgnoreCase)
+            ? "Economy" : request.ClassType;
+            
+            string quota = string.IsNullOrWhiteSpace(request.Quota) || 
+            request.Quota.Equals("string", StringComparison.OrdinalIgnoreCase)
+            ? "General" : request.Quota;
+
             var journeyDateTime = request.JourneyDate.Date.Add(ParseTime(train.DepartureTime));
             if (journeyDateTime <= DateTime.Now)
                 throw new ArgumentException("This train has already departed or is no longer bookable.");
 
+            //Ladies quota logic    
+            if (quota.Equals("Ladies",StringComparison.OrdinalIgnoreCase))
+            {
+                bool allFemale =request.Passengers.All(p =>p.Gender.Equals("Female",StringComparison.OrdinalIgnoreCase));
+                if (!allFemale){
+                    throw new Exception("Ladies quota allows only female passengers.");
+                }
+            }
             // Calculate Final Fare using Service Logic
-            decimal totalFare = (request.AdultCount * train.BaseFare) + (request.ChildCount * (train.BaseFare * 0.5m));
+            decimal modifiedFare = train.BaseFare;
+            if (classType.Equals("Business",StringComparison.OrdinalIgnoreCase))
+            {
+                modifiedFare += train.BaseFare * train.BusinessPercentage;
+            }
+            if (quota.Equals("Tatkal",StringComparison.OrdinalIgnoreCase))
+            {
+                modifiedFare += train.BaseFare * QuotaConfig.Tatkal;
+            }
+            decimal totalFare = (request.AdultCount * modifiedFare) +(request.ChildCount * (modifiedFare * 0.5m));
 
             // Generate Unique 8-character PNR
             string pnr = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
 
             // Load existing bookings for this train & journey date to avoid double-booking seats
             var existing = await _bookingRepo.GetBookingsByTrainAndDateAsync(train.TrainId, request.JourneyDate);
+            int quotaCapacity =GetQuotaCapacity(train.TotalSeats,quota);
+            int usedQuotaSeats =GetUsedQuotaSeats(
+                existing,quota);
+            
+            if (usedQuotaSeats + request.Passengers.Count > quotaCapacity)
+            {
+                throw new Exception($"No seats available under {quota} quota.");
+            }
+
             var occupied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach(var b in existing)
             {
@@ -66,22 +98,20 @@ namespace RailwayReservation.Services
 
             // business and quota counts
             int businessSeatsTotal = (int)Math.Ceiling(totalSeats * (double)train.BusinessPercentage);
-            int quotaSeatsTotal = (int)Math.Ceiling(totalSeats * (double)train.QuotaPercentage);
+            
 
             var coaches = new List<(string name,int seatCount)>();
             for(int i=1;i<=numCoaches;i++)
             {
                 int seats = baseSeatsPerCoach;
                 if (i == numCoaches) seats += remainder;
-                coaches.Add(($"PAK{i}" , seats));
+                coaches.Add(($"IND{i}" , seats));
             }
 
             // Create list of seat descriptors with class and quota flags
-            var seatList = new List<(string coach,string seatNo,string cls,bool isQuota)>();
+            var seatList = new List<(string coach,string seatNo,string cls)>();
             int seatsAdded = 0;
-            // Mark business seats starting from first BusinessCoachCount coaches
-            int businessRemaining = Math.Max(0, Math.Min(totalSeats, train.BusinessCoachCount * baseSeatsPerCoach + Math.Min(remainder, 1)));
-            businessRemaining = businessSeatsTotal; // prefer computed total
+            
 
             // Fill seats sequentially coach by coach
             foreach(var c in coaches)
@@ -90,8 +120,12 @@ namespace RailwayReservation.Services
                 {
                     seatsAdded++;
                     bool isBusiness = seatsAdded <= businessSeatsTotal; // first N seats are business
-                    bool isQuota = seatsAdded <= quotaSeatsTotal; // first M seats are quota
-                    seatList.Add((c.name, s.ToString(), isBusiness ? "Business" : "Economy", isQuota));
+                    seatList.Add(
+                        (
+                            c.name,
+                            s.ToString(),
+                            isBusiness ? "Business" : "Economy"
+                        ));
                 }
             }
 
@@ -99,20 +133,17 @@ namespace RailwayReservation.Services
             var available = seatList.Where(x => !occupied.Contains($"{x.coach}-{x.seatNo}")).ToList();
 
             // Helper to pick a seat matching preferences
-            (string coach,string seatNo,string cls) PickSeat(string desiredClass, bool preferQuota, string gender)
+            (string coach,string seatNo,string cls)PickSeat(string desiredClass)
             {
-                // If gender qualifies for quota, try quota seats first
-                if (preferQuota)
-                {
-                    var q = available.FirstOrDefault(x => x.isQuota && x.cls.Equals(desiredClass, StringComparison.OrdinalIgnoreCase));
-                    if (!q.Equals(default)) return (q.coach,q.seatNo,q.cls);
-                }
-                // then try any in desired class
-                var any = available.FirstOrDefault(x => x.cls.Equals(desiredClass, StringComparison.OrdinalIgnoreCase));
-                if (!any.Equals(default)) return (any.coach,any.seatNo,any.cls);
-                // fallback to any seat
+                var any = available.FirstOrDefault(
+                    x => x.cls.Equals(desiredClass,StringComparison.OrdinalIgnoreCase));
+                    if (!any.Equals(default))
+                    return (any.coach, any.seatNo, any.cls);
+                
                 var fallback = available.FirstOrDefault();
-                if (!fallback.Equals(default)) return (fallback.coach,fallback.seatNo,fallback.cls);
+                if (!fallback.Equals(default))
+                return (fallback.coach, fallback.seatNo, fallback.cls);
+                
                 throw new Exception("No seats available for selected journey");
             }
 
@@ -123,8 +154,8 @@ namespace RailwayReservation.Services
                 UserId = userId,
                 TrainId = train.TrainId,
                 JourneyDate = request.JourneyDate,
-                ClassType = string.IsNullOrEmpty(request.ClassType) ? "Economy" : request.ClassType,
-                Quota = string.IsNullOrEmpty(request.Quota) ? "General" : request.Quota,
+                ClassType = classType,
+                Quota = quota,
                 TotalFare = totalFare,
                 BookingDate = DateTime.Now,
                 Status = "Confirmed",
@@ -134,7 +165,7 @@ namespace RailwayReservation.Services
             foreach(var p in request.Passengers)
             {
                 bool isFemale = !string.IsNullOrEmpty(p.Gender) && p.Gender.Equals("Female", StringComparison.OrdinalIgnoreCase);
-                var picked = PickSeat(booking.ClassType, isFemale, p.Gender);
+                var picked =PickSeat(booking.ClassType);
                 // remove from available
                 available.RemoveAll(x => x.coach == picked.coach && x.seatNo == picked.seatNo);
                 booking.Passengers.Add(new Passenger
@@ -143,7 +174,9 @@ namespace RailwayReservation.Services
                     Age = p.Age,
                     Gender = p.Gender,
                     CoachNo = picked.coach,
-                    SeatNo = picked.seatNo
+                    SeatNo = picked.seatNo,
+                    SeatClass = booking.ClassType,
+                    SeatQuota = booking.Quota
                 });
             }
 
@@ -186,6 +219,20 @@ namespace RailwayReservation.Services
                 return parsed;
 
             return TimeSpan.Zero;
+        }
+        private int GetQuotaCapacity(int totalSeats,string quota)
+        {
+            return quota switch
+            {
+                "Ladies" => (int)(totalSeats * QuotaConfig.Ladies),
+                "Tatkal" => (int)(totalSeats * QuotaConfig.Tatkal),_ => totalSeats
+            };
+        }
+
+        private int GetUsedQuotaSeats(IEnumerable<Booking> bookings,string quota)
+        {
+            return bookings.SelectMany(b => b.Passengers).
+            Count(p =>p.SeatQuota.Equals(quota,StringComparison.OrdinalIgnoreCase));
         }
 
         public async Task<bool> CancelBookingAsync(string pnr)

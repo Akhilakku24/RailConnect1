@@ -1,5 +1,7 @@
 using RailwayReservation.Models;
 using RailwayReservation.DTOs;
+using RailConnect.DTOs;
+using RailwayConnect.DTOs;
 
 namespace RailwayReservation.Interfaces;
 

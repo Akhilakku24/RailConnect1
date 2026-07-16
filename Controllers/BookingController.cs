@@ -6,7 +6,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization; 
-using RailwayReservation.Interfaces;     
+using RailwayReservation.Interfaces;
+using RailwayConnect.DTOs;
+
 
 [Authorize(Roles = "Passenger")]
 [Route("api/[controller]")]

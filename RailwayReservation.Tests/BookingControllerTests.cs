@@ -2,6 +2,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NUnit.Framework;
+using RailConnect.DTOs;
+using RailwayConnect.DTOs;
 using RailwayReservation.DTOs;
 using RailwayReservation.Interfaces;
 using RailwayReservation.Models;

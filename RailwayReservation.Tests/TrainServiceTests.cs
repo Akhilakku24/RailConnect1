@@ -15,7 +15,12 @@ public class TrainServiceTests
         var bookingRepo = new FakeBookingRepository();
         var service = new TrainService(trainRepo, bookingRepo);
 
-        var fare = await service.CalculateFareAsync("TR100", 2, 1);
+        var fare = await service.CalculateFareAsync(
+    "TR100",
+    2,
+    1,
+    "Economy",
+    "General");
 
         Assert.That(fare, Is.EqualTo(250m));
     }
@@ -70,7 +75,7 @@ public class TrainServiceTests
         public Task<Booking> AddAsync(Booking booking) => Task.FromResult(booking);
         public Task<Booking?> GetByPnrAsync(string pnr) => Task.FromResult<Booking?>(null);
         public Task<IEnumerable<Booking>> GetBookingsByTrainAndDateAsync(int trainId, DateTime journeyDate) => Task.FromResult<IEnumerable<Booking>>(Array.Empty<Booking>());
-        public Task<int> GetConfirmedBookingCountByTrainAsync(int trainId) => Task.FromResult(_confirmedCount);
+        public Task<int> GetBookedSeatCountByTrainAsync(int trainId) => Task.FromResult(_confirmedCount);
         public Task<IEnumerable<Booking>> GetByUserIdAsync(string userId) => Task.FromResult<IEnumerable<Booking>>(Array.Empty<Booking>());
         public Task<IEnumerable<Booking>> GetAllAsync() => Task.FromResult<IEnumerable<Booking>>(Array.Empty<Booking>());
         public Task UpdateAsync(Booking booking) => Task.CompletedTask;

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization; 
 using RailwayReservation.Interfaces;     
-using RailwayReservation.Models;         
+using RailwayReservation.Models;
+using RailwayReservation.DTOs;
+
 
 [Authorize(Roles = "Admin")]
 [Route("api/[controller]")]
@@ -29,6 +31,17 @@ public class AdminController : ControllerBase
     {
         await _trainService.DeleteTrainAsync(id);
         return Ok("Train Deactivated");
+    }
+
+    [HttpPut("update-train/{trainNo}")]
+    public async Task<IActionResult> UpdateTrain(string trainNo,[FromBody] UpdateTrainDTO dto)
+    {
+        var updatedTrain = await _trainService.UpdateTrainAsync(trainNo, dto);
+        if (updatedTrain == null)
+        {
+        return NotFound($"Train with TrainNo {trainNo} not found.");
+        }
+        return Ok(updatedTrain);
     }
 
     [HttpGet("booking-history")]

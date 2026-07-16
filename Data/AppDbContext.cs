@@ -19,6 +19,8 @@ namespace RailwayReservation.Data
             // Precision for Currency
             modelBuilder.Entity<Train>().Property(t => t.BaseFare).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Booking>().Property(b => b.TotalFare).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Train>().Property(t => t.BusinessPercentage).HasPrecision(5, 2);
+
 
             // Enforce Unique PNR
             modelBuilder.Entity<Booking>().HasIndex(b => b.PNR).IsUnique();

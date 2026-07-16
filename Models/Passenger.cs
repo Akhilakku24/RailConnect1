@@ -11,7 +11,8 @@ namespace RailwayReservation.Models
         public string Gender { get; set; } = null!;
         public string? CoachNo { get; set; }
         public string? SeatNo { get; set; }
-        
+        public string SeatClass { get; set; } = null!;
+        public string SeatQuota { get; set; } = null!;
         public int BookingId { get; set; }
     }
 }

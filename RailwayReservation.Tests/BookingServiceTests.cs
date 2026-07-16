@@ -8,6 +8,8 @@ using RailwayReservation.Interfaces;
 using RailwayReservation.Models;
 using RailwayReservation.Services;
 using NUnit.Framework;
+using RailwayConnect.DTOs;
+using RailConnect.DTOs;
 
 namespace RailwayReservation.Tests;
 
@@ -146,7 +148,7 @@ public class BookingServiceTests
         public Task<Booking> AddAsync(Booking booking) => Task.FromResult(booking);
         public Task<Booking?> GetByPnrAsync(string pnr) => Task.FromResult<Booking?>(null);
         public Task<IEnumerable<Booking>> GetBookingsByTrainAndDateAsync(int trainId, DateTime journeyDate) => Task.FromResult<IEnumerable<Booking>>(Array.Empty<Booking>());
-        public Task<int> GetConfirmedBookingCountByTrainAsync(int trainId) => Task.FromResult(0);
+        public Task<int> GetBookedSeatCountByTrainAsync(int trainId) => Task.FromResult(0);
         public Task<IEnumerable<Booking>> GetByUserIdAsync(string userId) => Task.FromResult<IEnumerable<Booking>>(Array.Empty<Booking>());
         public Task<IEnumerable<Booking>> GetAllAsync() => Task.FromResult<IEnumerable<Booking>>(Array.Empty<Booking>());
         public Task UpdateAsync(Booking booking) => Task.CompletedTask;

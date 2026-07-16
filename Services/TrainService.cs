@@ -1,6 +1,8 @@
+using RailConnect.Configurations;
 using RailwayReservation.DTOs;
 using RailwayReservation.Interfaces;
 using RailwayReservation.Models;
+using RailwayReservation.Repositories;
 
 namespace RailwayReservation.Services
 {
@@ -15,6 +17,23 @@ namespace RailwayReservation.Services
             _bookingRepo = bookingRepo;
         }
 
+        private decimal CalculateTicketFare(Train train,
+        int adults,int children,string classType,string quota)
+        {
+            decimal baseFare = train.BaseFare;
+            if (classType.Equals("Business",StringComparison.OrdinalIgnoreCase))
+            {
+                baseFare += train.BaseFare * train.BusinessPercentage;
+            }
+            if (quota.Equals("Tatkal", StringComparison.OrdinalIgnoreCase))
+            {
+                baseFare += train.BaseFare * QuotaConfig.Tatkal;
+            }
+            decimal adultFare = adults * baseFare;
+            decimal childFare = children * (baseFare * 0.5m);
+            return adultFare + childFare;
+        }
+
         public async Task<IEnumerable<TrainResponseDTO>> GetAvailableTrainsAsync(string source, string destination)
         {
             var trains = await _trainRepo.GetAllTrainsAsync();
@@ -25,7 +44,7 @@ namespace RailwayReservation.Services
                             t.Destination.Equals(destination, StringComparison.OrdinalIgnoreCase))
                 .Select(async t =>
                 {
-                    var confirmedBookings = await _bookingRepo.GetConfirmedBookingCountByTrainAsync(t.TrainId);
+                    var confirmedBookings = await _bookingRepo.GetBookedSeatCountByTrainAsync(t.TrainId);
                     return new TrainResponseDTO
                     {
                         TrainNo = t.TrainNo,
@@ -38,16 +57,14 @@ namespace RailwayReservation.Services
                     };
                 }));
         }
-        public async Task<decimal> CalculateFareAsync(string trainNo, int adultCount, int childCount)
+        public async Task<decimal> CalculateFareAsync(string trainNo,int adultCount,
+        int childCount,string classType,string quota)
         {
             var train = await _trainRepo.GetTrainByTrainNoAsync(trainNo);
-            if (train == null) return 0;
-
-            // SRP: Business Rule - Adults pay full, Children pay 50%
-            decimal adultTotal = adultCount * train.BaseFare;
-            decimal childTotal = childCount * (train.BaseFare * 0.5m);
-
-            return adultTotal + childTotal;
+            if (train == null){
+                return 0;
+            }
+            return CalculateTicketFare(train,adultCount,childCount,classType,quota);
         }
 
         public async Task<Train> AddTrainAsync(Train train)
@@ -62,13 +79,55 @@ namespace RailwayReservation.Services
             await _trainRepo.DeleteTrainAsync(trainId);
             return true;
         }
+        public async Task<Train?> UpdateTrainAsync(string trainNo, UpdateTrainDTO dto){
+            var train = await _trainRepo.GetTrainByTrainNoAsync(trainNo);
+            if (train == null){
+                return null;
+            }
+            if(dto.Source != null)
+            {
+                train.Source = dto.Source;
+            }
+            if(dto.Destination != null)
+            {
+                train.Destination = dto.Destination;
+            }
+            if(dto.DepartureTime != null){
+                train.DepartureTime = dto.DepartureTime;
+            }
+            if(dto.ArrivalTime != null)
+            {
+                train.ArrivalTime = dto.ArrivalTime;
+            }
+            if(dto.BaseFare.HasValue)
+            {
+                train.BaseFare = dto.BaseFare.Value;
+            }
+            if(dto.TotalSeats.HasValue){
+                train.TotalSeats = dto.TotalSeats.Value;
+            }
+            if(dto.NumCoaches.HasValue)
+            {
+                train.NumCoaches = dto.NumCoaches.Value;
+            }
+            if(dto.BusinessPercentage.HasValue)
+            {
+                train.BusinessPercentage = dto.BusinessPercentage.Value;
+            }
+            if(dto.IsActive.HasValue){
+                train.IsActive = dto.IsActive.Value;
+            }
+            await _trainRepo.UpdateTrainAsync(train);
+
+            return train;
+        }
 
         public async Task<IEnumerable<TrainResponseDTO>> GetAllTrainsAsync()
         {
             var trains = await _trainRepo.GetAllTrainsAsync();
             return await Task.WhenAll(trains.Select(async t =>
             {
-                var confirmedBookings = await _bookingRepo.GetConfirmedBookingCountByTrainAsync(t.TrainId);
+                var confirmedBookings = await _bookingRepo.GetBookedSeatCountByTrainAsync(t.TrainId);
                 return new TrainResponseDTO
                 {
                     TrainNo = t.TrainNo,

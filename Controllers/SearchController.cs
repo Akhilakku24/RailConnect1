@@ -28,9 +28,18 @@ public class SearchController : ControllerBase
 
 
     [HttpGet("fare-estimate")]
-    public async Task<IActionResult> GetFare([FromQuery] string trainNo, [FromQuery] int adults, [FromQuery] int children)
+    public async Task<IActionResult> GetFare([FromQuery] string trainNo,[FromQuery] int adults,
+    [FromQuery] int children,[FromQuery] string classType,[FromQuery] string quota)
     {
-        var totalFare = await _trainService.CalculateFareAsync(trainNo, adults, children);
-        return Ok(new { TotalFare = totalFare });
-    }
+        var totalFare = await _trainService.CalculateFareAsync(trainNo,adults,children,classType,quota);
+        return Ok(new
+        {
+            TrainNo = trainNo,
+            Adults = adults,
+            Children = children,
+            ClassType = classType,
+            Quota = quota,
+            TotalFare = totalFare
+        });
+}
 }
