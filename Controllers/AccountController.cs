@@ -30,6 +30,10 @@ namespace RailwayReservation.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDTO model)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             var userExists = await _userManager.FindByNameAsync(model.Username);
             if (userExists != null) 
                 return BadRequest(new { message = "Username is already taken!" });
@@ -73,6 +77,10 @@ namespace RailwayReservation.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDTO model)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             var user = await _userManager.FindByNameAsync(model.Username);
             
             if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))

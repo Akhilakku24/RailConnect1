@@ -22,6 +22,11 @@ public class BookingController : ControllerBase
     [HttpPost("book")]
     public async Task<IActionResult> Book([FromBody] BookingRequestDTO request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         try
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -46,11 +51,15 @@ public class BookingController : ControllerBase
     public async Task<IActionResult> Cancel(string pnr)
     {
         var result = await _bookingService.CancelBookingAsync(pnr);
-        return result ? Ok("Cancelled") : BadRequest("Failed to cancel");
+        return result ? Ok(new
+        {
+            Message = "Booking cancelled successfully."
+        }) : NotFound(new
+        {
+            Message = "PNR not found."
+        });
     }
         
-
-    
     [HttpGet("status/{pnr}")]
     public async Task<IActionResult> CheckStatus(string pnr)
     {

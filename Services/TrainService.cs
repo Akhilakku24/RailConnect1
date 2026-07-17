@@ -62,13 +62,22 @@ namespace RailwayReservation.Services
         {
             var train = await _trainRepo.GetTrainByTrainNoAsync(trainNo);
             if (train == null){
-                return 0;
+                throw new Exception("Train not found.");
             }
             return CalculateTicketFare(train,adultCount,childCount,classType,quota);
         }
 
         public async Task<Train> AddTrainAsync(Train train)
         {
+            if (string.IsNullOrWhiteSpace(train.TrainNo))
+            throw new Exception("Train number is required.");
+            
+            if (string.IsNullOrWhiteSpace(train.Source))
+            throw new Exception("Source is required.");
+
+            if (string.IsNullOrWhiteSpace(train.Destination))
+            throw new Exception("Destination is required.");
+            
             train.IsActive = true;
             await _trainRepo.AddTrainAsync(train);
             return train;

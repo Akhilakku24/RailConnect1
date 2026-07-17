@@ -22,6 +22,10 @@ public class AdminController : ControllerBase
     [HttpPost("add-train")]
     public async Task<IActionResult> CreateTrain([FromBody] Train train)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
         var created = await _trainService.AddTrainAsync(train);
         return CreatedAtAction(nameof(CreateTrain), new { id = created.TrainId }, created);
     }
@@ -29,8 +33,21 @@ public class AdminController : ControllerBase
     [HttpDelete("remove-train/{id}")]
     public async Task<IActionResult> RemoveTrain(int id)
     {
-        await _trainService.DeleteTrainAsync(id);
-        return Ok("Train Deactivated");
+        try
+        {
+            await _trainService.DeleteTrainAsync(id);
+            return Ok(new
+            {
+                Message = "Train deactivated successfully."
+            });
+        }
+        catch(Exception ex)
+        {
+            return NotFound(new
+            {
+                Message = ex.Message
+            });
+        }
     }
 
     [HttpPut("update-train/{trainNo}")]
